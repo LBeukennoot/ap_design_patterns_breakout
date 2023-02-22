@@ -29,13 +29,13 @@ class Paddle extends HTMLElement {
     }
 
     private onKeyDown(e: KeyboardEvent): void {
-        if(e.key == "ArrowLeft")        this.moveLeft   = true
-        else if (e.key == "ArrowRight") this.moveRight  = true
+        if(e.key == "ArrowLeft" || e.key == "a")        this.moveLeft   = true
+        else if (e.key == "ArrowRight" || e.key == "d") this.moveRight  = true
     }
 
     private onKeyUp(e: KeyboardEvent): void {
-        if(e.key == "ArrowLeft")        this.moveLeft   = false
-        else if (e.key == "ArrowRight") this.moveRight  = false
+        if(e.key == "ArrowLeft" || e.key == "a")        this.moveLeft   = false
+        else if (e.key == "ArrowRight" || e.key == "d") this.moveRight  = false
     }
 
     public update() {

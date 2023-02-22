@@ -2,10 +2,25 @@
 class Game {
     constructor() {
         this.paddle = new Paddle();
-        this.createGrid();
+        this.grid = new Grid();
         this.gameLoop();
     }
-    createGrid() {
+    gameLoop() {
+        this.paddle.update();
+        requestAnimationFrame(() => this.gameLoop());
+    }
+}
+window.addEventListener("load", () => new Game());
+class Brick extends HTMLElement {
+    constructor(width, height) {
+        super();
+    }
+}
+window.customElements.define("brick-component", Brick);
+class Grid extends HTMLElement {
+    constructor() {
+        super();
+        console.log("Grid created");
         let rows = 7;
         let columns = 12;
         let brickWidth = 64;
@@ -15,18 +30,14 @@ class Game {
                 let offsetX = (window.innerWidth - columns * brickWidth) / 2;
                 let x = column * brickWidth + offsetX;
                 let y = row * brickHeight + 100;
-                console.log(`Place brick at (${x}, ${y})`);
+                const brick = new Brick(x, y, brickWidth, brickHeight);
                 let game = document.getElementsByTagName("game")[0];
                 game.appendChild(this);
             }
         }
     }
-    gameLoop() {
-        this.paddle.update();
-        requestAnimationFrame(() => this.gameLoop());
-    }
 }
-window.addEventListener("load", () => new Game());
+window.customElements.define("grid-component", Grid);
 class Paddle extends HTMLElement {
     constructor() {
         super();
@@ -44,15 +55,15 @@ class Paddle extends HTMLElement {
         window.addEventListener("keyup", (e) => this.onKeyUp(e));
     }
     onKeyDown(e) {
-        if (e.key == "ArrowLeft")
+        if (e.key == "ArrowLeft" || e.key == "a")
             this.moveLeft = true;
-        else if (e.key == "ArrowRight")
+        else if (e.key == "ArrowRight" || e.key == "d")
             this.moveRight = true;
     }
     onKeyUp(e) {
-        if (e.key == "ArrowLeft")
+        if (e.key == "ArrowLeft" || e.key == "a")
             this.moveLeft = false;
-        else if (e.key == "ArrowRight")
+        else if (e.key == "ArrowRight" || e.key == "d")
             this.moveRight = false;
     }
     update() {
