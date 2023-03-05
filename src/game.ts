@@ -7,23 +7,14 @@ class Game {
     private paddle : Paddle
     private grid : Grid
     private ball : Ball
+    private powerups : Array<Powerup> = []
 
     constructor() {
         this.paddle = new Paddle()
         this.grid = new Grid()
         this.ball = new Ball()
 
-        // this.createGrid()
         this.gameLoop()
-    }
-
-    private checkCollision(a: DOMRect, b: DOMRect) : boolean {
-        // console.log(a.bottom)
-
-        return (a.left <= b.right &&
-                b.left <= a.right &&
-                a.top <= b.bottom &&
-                b.top <= a.bottom)
     }
 
     private getCollisionX(ball: DOMRect, object: DOMRect) : boolean {
@@ -40,46 +31,87 @@ class Game {
             ball.y + this.ball.getSpeedY() < object.y + object.height)
     }
 
-    // private collisionDetection() {
-    //     const b = this.paddle.getBoundingClientRect()
-    //     if (x > b.x && x < b.x + brickWidth && y > b.y && y < b.y + brickHeight) {
-    //         dy = -dy;
-    //     }
-    // }
+    private hitBrickHandler(index: number, position: Array<number>) {
+        this.grid.hit(index)
+        //powerup
+        this.powerups.push(new Powerup(position[0], position[1]))
+    }
 
     private gameLoop() {
+
+        //updating gameobjects
         this.paddle.update()
         this.ball.update()
+        for(const powerup of this.powerups) {
+            powerup.update()
+        }
+
         const ballBounds = this.ball.getBoundingClientRect()
         const paddleBounds = this.paddle.getBoundingClientRect()
 
-        for(let i = 0; i < this.grid.getBricks().length; i++) {
-            const brick = this.grid.getBricks()[i]
-            const brickBounds = brick.getBoundingClientRect()
+        //checking collision with ball and brick
+        if(this.grid.getBricks().length > 0) {
 
-            if (this.getCollisionX(ballBounds, brickBounds)) {
-          
-                this.ball.invertSpeedX()
-                this.grid.hit(i)
+            for(let i = 0; i < this.grid.getBricks().length; i++) {
+
+                const brick = this.grid.getBricks()[i]
+                const brickBounds = brick.getBoundingClientRect()
+    
+                if (this.getCollisionX(ballBounds, brickBounds)) {
+              
+                    this.ball.invertSpeedX()
+                    this.hitBrickHandler(i, brick.getPosition())
+
+                }
+              
+                if (this.getCollisionY(ballBounds, brickBounds)) {
+                
+                    this.ball.invertSpeedY()
+                    this.hitBrickHandler(i, brick.getPosition())
+
+                }
+    
             }
-          
-            if (this.getCollisionY(ballBounds, brickBounds)) {
-            
-                this.ball.invertSpeedY()
-                this.grid.hit(i)
-            }
+        } else {
+
+            console.log("all gone")
 
         }
 
+        //checking collision with ball and paddle
         if (this.getCollisionX(ballBounds, paddleBounds)) {
           
             this.ball.invertSpeedX()
+
         }
       
         if (this.getCollisionY(ballBounds, paddleBounds)) {
         
             this.ball.invertSpeedY()
+
         }
+
+        console.log(this.powerups)
+        if(this.powerups.length > 0) {
+            for(let i = 0; i < this.powerups.length; i++) {
+
+                //removing if out of screen
+                if(this.powerups[i].y > window.innerHeight) {
+                    console.log("weg: " + i)
+                    this.powerups[i].remove()
+                    this.powerups.splice(i, 1)
+                }
+
+                //enabling powerup when cought by paddle
+                if (this.getCollisionY(paddleBounds, this.powerups[i].getBoundingClientRect())) {
+        
+                    console.log("WOOO GOGO")
+        
+                }
+            }
+        }
+
+        //checking collision with paddle and powerup
 
         requestAnimationFrame(() => this.gameLoop())
     }

@@ -1,16 +1,11 @@
 "use strict";
 class Game {
     constructor() {
+        this.powerups = [];
         this.paddle = new Paddle();
         this.grid = new Grid();
         this.ball = new Ball();
         this.gameLoop();
-    }
-    checkCollision(a, b) {
-        return (a.left <= b.right &&
-            b.left <= a.right &&
-            a.top <= b.bottom &&
-            b.top <= a.bottom);
     }
     getCollisionX(ball, object) {
         return (ball.x + ball.width + this.ball.getSpeedX() > object.x &&
@@ -24,28 +19,53 @@ class Game {
             ball.y + ball.height + this.ball.getSpeedY() > object.y &&
             ball.y + this.ball.getSpeedY() < object.y + object.height);
     }
+    hitBrickHandler(index, position) {
+        this.grid.hit(index);
+        this.powerups.push(new Powerup(position[0], position[1]));
+    }
     gameLoop() {
         this.paddle.update();
         this.ball.update();
+        for (const powerup of this.powerups) {
+            powerup.update();
+        }
         const ballBounds = this.ball.getBoundingClientRect();
         const paddleBounds = this.paddle.getBoundingClientRect();
-        for (let i = 0; i < this.grid.getBricks().length; i++) {
-            const brick = this.grid.getBricks()[i];
-            const brickBounds = brick.getBoundingClientRect();
-            if (this.getCollisionX(ballBounds, brickBounds)) {
-                this.ball.invertSpeedX();
-                this.grid.hit(i);
+        if (this.grid.getBricks().length > 0) {
+            for (let i = 0; i < this.grid.getBricks().length; i++) {
+                const brick = this.grid.getBricks()[i];
+                const brickBounds = brick.getBoundingClientRect();
+                if (this.getCollisionX(ballBounds, brickBounds)) {
+                    this.ball.invertSpeedX();
+                    this.hitBrickHandler(i, brick.getPosition());
+                }
+                if (this.getCollisionY(ballBounds, brickBounds)) {
+                    this.ball.invertSpeedY();
+                    this.hitBrickHandler(i, brick.getPosition());
+                }
             }
-            if (this.getCollisionY(ballBounds, brickBounds)) {
-                this.ball.invertSpeedY();
-                this.grid.hit(i);
-            }
+        }
+        else {
+            console.log("all gone");
         }
         if (this.getCollisionX(ballBounds, paddleBounds)) {
             this.ball.invertSpeedX();
         }
         if (this.getCollisionY(ballBounds, paddleBounds)) {
             this.ball.invertSpeedY();
+        }
+        console.log(this.powerups);
+        if (this.powerups.length > 0) {
+            for (let i = 0; i < this.powerups.length; i++) {
+                if (this.powerups[i].y > window.innerHeight) {
+                    console.log("weg: " + i);
+                    this.powerups[i].remove();
+                    this.powerups.splice(i, 1);
+                }
+                if (this.getCollisionY(paddleBounds, this.powerups[i].getBoundingClientRect())) {
+                    console.log("WOOO GOGO");
+                }
+            }
         }
         requestAnimationFrame(() => this.gameLoop());
     }
@@ -107,26 +127,6 @@ class Ball extends HTMLElement {
 const SPEED_X = 7;
 const SPEED_Y = -3;
 window.customElements.define("ball-component", Ball);
-class Brick extends HTMLElement {
-    constructor(x, y, width, height, type) {
-        super();
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-        this.type = type;
-        let game = document.getElementsByTagName("game")[0];
-        game.appendChild(this);
-        this.draw();
-    }
-    draw() {
-        this.style.transform = `translate(${this.x}px, ${this.y}px)`;
-    }
-    hit() {
-        this.remove();
-    }
-}
-window.customElements.define("brick-component", Brick);
 class Grid extends HTMLElement {
     constructor() {
         super();
@@ -141,7 +141,13 @@ class Grid extends HTMLElement {
                 let offsetX = (window.innerWidth - this.columns * this.brickWidth) / 2;
                 let x = column * this.brickWidth + offsetX;
                 let y = row * this.brickHeight + 105;
-                const brick = new Brick(x, y, this.brickWidth, this.brickHeight, "purple");
+                let brick;
+                if (Math.random() < 0.3) {
+                    brick = new YellowBrick(x, y, this.brickWidth, this.brickHeight);
+                }
+                else {
+                    brick = new PurpleBrick(x, y, this.brickWidth, this.brickHeight);
+                }
                 this.bricks.push(brick);
                 let game = document.getElementsByTagName("game")[0];
                 game.appendChild(this);
@@ -153,10 +159,8 @@ class Grid extends HTMLElement {
     }
     hit(index) {
         if (this.bricks.length > 0) {
-            this.bricks[index].hit();
-            this.bricks.splice(index, 1);
+            this.bricks = this.bricks[index].hit(this.bricks, index);
         }
-        console.log(this.bricks.length);
     }
 }
 window.customElements.define("grid-component", Grid);
@@ -203,4 +207,90 @@ class Paddle extends HTMLElement {
     }
 }
 window.customElements.define("paddle-component", Paddle);
+class Score {
+    constructor() {
+        this._bricksLeft = 0;
+        this._lives = 3;
+    }
+    get bricksLeft() {
+        return this._bricksLeft;
+    }
+    set bricksLeft(v) {
+        this._bricksLeft = v;
+    }
+    get lives() {
+        return this._lives;
+    }
+    set lives(v) {
+        this._lives = v;
+    }
+}
+class Brick extends HTMLElement {
+    constructor(x, y, width, height) {
+        super();
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        let game = document.getElementsByTagName("game")[0];
+        game.appendChild(this);
+        this.draw();
+    }
+    draw() {
+        this.style.transform = `translate(${this.x}px, ${this.y}px)`;
+    }
+    hit(bricks, index) {
+        return bricks;
+    }
+    getPosition() {
+        return [this.x, this.y];
+    }
+}
+class PurpleBrick extends Brick {
+    constructor(x, y, width, height) {
+        super(x, y, width, height);
+    }
+    hit(bricks, index) {
+        this.remove();
+        bricks.splice(index, 1);
+        return bricks;
+    }
+}
+window.customElements.define("brick-component", PurpleBrick);
+class YellowBrick extends Brick {
+    constructor(x, y, width, height) {
+        super(x, y, width, height);
+    }
+    hit(bricks, index) {
+        this.remove();
+        const brick = new PurpleBrick(this.x, this.y, this.width, this.height);
+        bricks[index] = brick;
+        return bricks;
+    }
+}
+window.customElements.define("yellow-brick", YellowBrick);
+class Powerup extends HTMLElement {
+    constructor(x, y) {
+        super();
+        this._x = 0;
+        this._y = 0;
+        this._speed = -2;
+        this._x = x;
+        this._y = y;
+        let game = document.getElementsByTagName("game")[0];
+        game.appendChild(this);
+        this.draw();
+    }
+    get y() { return this._y; }
+    draw() {
+        this.style.transform = `translate(${this._x}px, ${this._y}px)`;
+    }
+    update() {
+        this._y -= this._speed;
+        this.draw();
+    }
+    hit() {
+    }
+}
+window.customElements.define("hold-upgrade", Powerup);
 //# sourceMappingURL=main.js.map

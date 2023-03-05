@@ -22,7 +22,12 @@ class Grid extends HTMLElement {
                 
                 // Voeg op deze plek een nieuw blok toe aan het spel
                 // console.log(`Place brick at (${x}, ${y})`)
-                const brick = new Brick(x, y, this.brickWidth, this.brickHeight, "purple");
+                let brick
+                if (Math.random() < 0.3) {
+                    brick = new YellowBrick(x, y, this.brickWidth, this.brickHeight);
+                } else {
+                    brick = new PurpleBrick(x, y, this.brickWidth, this.brickHeight);
+                }
                 this.bricks.push(brick)
                 let game = document.getElementsByTagName("game")[0]
                 game.appendChild(this)
@@ -37,11 +42,10 @@ class Grid extends HTMLElement {
     public hit(index : number) : void {
 
         if(this.bricks.length > 0) {
-            this.bricks[index].hit()
-            this.bricks.splice(index, 1)
+            this.bricks = this.bricks[index].hit(this.bricks, index)
+            // console.log("Bricks: " + this.bricks.length)
         }
         
-        console.log(this.bricks.length)
     }
 }
 
