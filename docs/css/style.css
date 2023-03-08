@@ -64,8 +64,12 @@ faster-upgrade {
     width:48px; height:46px;
     background-image: url(../images/upgrades/polygon_blue.png);
 }
+reverse-upgrade {
+    width:48px; height:46px;
+    background-image: url(../images/upgrades/polygon_yellow.png);
+}
 
-score {
+score-component {
     position: relative;
     display: block;
     margin: auto;

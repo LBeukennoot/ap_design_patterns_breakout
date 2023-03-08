@@ -5,23 +5,35 @@ class Game {
         this.paddle = new Paddle();
         this.grid = new Grid();
         this.ball = new Ball();
+        this.score = new Score();
+        this.score.bricksLeft = this.grid.getBricks().length;
         this.gameLoop();
     }
     getCollisionX(ball, object) {
-        return (ball.x + ball.width + this.ball.getSpeedX() > object.x &&
-            ball.x + this.ball.getSpeedX() < object.x + object.width &&
+        return (ball.x + ball.width + this.ball.speedX > object.x &&
+            ball.x + this.ball.speedX < object.x + object.width &&
             ball.y + ball.height > object.y &&
             ball.y < object.y + object.height);
     }
     getCollisionY(ball, object) {
         return (ball.x + ball.width > object.x &&
             ball.x < object.x + object.width &&
-            ball.y + ball.height + this.ball.getSpeedY() > object.y &&
-            ball.y + this.ball.getSpeedY() < object.y + object.height);
+            ball.y + ball.height + this.ball.speedY > object.y &&
+            ball.y + this.ball.speedY < object.y + object.height);
     }
     hitBrickHandler(index, position) {
         this.grid.hit(index);
-        this.powerups.push(new Powerup(position[0], position[1]));
+        this.score.bricksLeft = this.grid.getBricks().length;
+        const randomizer = Math.random();
+        if (randomizer < 0.3) {
+            this.powerups.push(new YellowPowerup(position[0], position[1]));
+        }
+        else if (randomizer > 0.3 && randomizer < 0.6) {
+            this.powerups.push(new RedPowerup(position[0], position[1]));
+        }
+        else if (randomizer > 0.6) {
+            this.powerups.push(new BluePowerup(position[0], position[1]));
+        }
     }
     gameLoop() {
         this.paddle.update();
@@ -54,74 +66,94 @@ class Game {
         if (this.getCollisionY(ballBounds, paddleBounds)) {
             this.ball.invertSpeedY();
         }
-        console.log(this.powerups);
         if (this.powerups.length > 0) {
             for (let i = 0; i < this.powerups.length; i++) {
-                if (this.powerups[i].y > window.innerHeight) {
-                    console.log("weg: " + i);
+                if (this.getCollisionY(paddleBounds, this.powerups[i].getBoundingClientRect())) {
+                    const powerupName = this.powerups[i].nodeName;
+                    if (powerupName == "HOLD-UPGRADE") {
+                        this.paddle.behaviour = new Slow(this.paddle);
+                    }
+                    else if (powerupName == "FASTER-UPGRADE") {
+                        this.paddle.behaviour = new Double(this.paddle);
+                    }
+                    else if (powerupName == "REVERSE-UPGRADE") {
+                        this.paddle.behaviour = new Reverse(this.paddle);
+                    }
                     this.powerups[i].remove();
                     this.powerups.splice(i, 1);
                 }
-                if (this.getCollisionY(paddleBounds, this.powerups[i].getBoundingClientRect())) {
-                    console.log("WOOO GOGO");
+                if (this.powerups[i] !== undefined && this.powerups[i].y > window.innerHeight) {
+                    this.powerups[i].remove();
+                    this.powerups.splice(i, 1);
                 }
             }
         }
-        requestAnimationFrame(() => this.gameLoop());
+        if (this.ball.outOfBounds) {
+            this.score.lives = this.score.lives - 1;
+            this.ball.resetPosition();
+        }
+        if (this.score.lives !== 0) {
+            requestAnimationFrame(() => this.gameLoop());
+        }
     }
 }
 window.addEventListener("load", () => new Game());
 class Ball extends HTMLElement {
     constructor() {
         super();
-        this.startValueX = window.innerWidth / 2 - this.clientWidth / 2;
-        this.startValueY = window.innerHeight * 0.90;
-        this.speedX = SPEED_X;
-        this.speedY = SPEED_Y;
-        this.x = this.startValueX;
-        this.y = this.startValueY;
+        this._startValueX = window.innerWidth / 2 - this.clientWidth / 2;
+        this._startValueY = window.innerHeight * 0.90;
+        this._speedX = SPEED_X;
+        this._speedY = SPEED_Y;
+        this._outOfBounds = false;
+        this._x = this._startValueX;
+        this._y = this._startValueY;
         let game = document.getElementsByTagName("game")[0];
         game.appendChild(this);
         this.draw();
     }
     invertSpeedX() {
-        this.speedX *= -1;
+        this._speedX *= -1;
     }
     invertSpeedY() {
-        this.speedY *= -1;
+        this._speedY *= -1;
     }
-    getSpeedX() {
-        return this.speedX;
+    get speedX() {
+        return this._speedX;
     }
-    getSpeedY() {
-        return this.speedY;
+    get speedY() {
+        return this._speedY;
     }
     update() {
-        let newX = this.x + this.speedX;
+        let newX = this._x + this._speedX;
         if (newX > 0 && newX + this.clientWidth < window.innerWidth) {
-            this.x = newX;
+            this._x = newX;
         }
         else {
-            this.speedX *= -1;
+            this._speedX *= -1;
         }
-        let newY = this.y + this.speedY;
+        let newY = this._y + this._speedY;
         if (newY > 0 && newY + this.clientWidth < window.innerHeight) {
-            this.y = newY;
+            this._y = newY;
         }
         else {
-            this.speedY *= -1;
+            this._speedY *= -1;
         }
         if (newY + this.clientWidth > window.innerHeight) {
-            this.speedX = SPEED_X;
-            this.speedY = SPEED_Y;
-            this.x = this.startValueX;
-            this.y = this.startValueY;
-            console.log("live -1");
+            this._outOfBounds = true;
         }
         this.draw();
     }
+    get outOfBounds() { return this._outOfBounds; }
+    resetPosition() {
+        this._speedX = SPEED_X;
+        this._speedY = SPEED_Y;
+        this._x = this._startValueX;
+        this._y = this._startValueY;
+        this._outOfBounds = false;
+    }
     draw() {
-        this.style.transform = `translate(${this.x}px, ${this.y}px)`;
+        this.style.transform = `translate(${this._x}px, ${this._y}px)`;
     }
 }
 const SPEED_X = 7;
@@ -164,67 +196,43 @@ class Grid extends HTMLElement {
     }
 }
 window.customElements.define("grid-component", Grid);
-class Paddle extends HTMLElement {
+class Score extends HTMLElement {
     constructor() {
         super();
-        this.x = 0;
-        this.y = 0;
-        this.moveLeft = false;
-        this.moveRight = false;
-        this.speed = 7;
-        console.log("Paddle created!");
+        this._bricksLeft = 1;
+        this._lives = 3;
         let game = document.getElementsByTagName("game")[0];
         game.appendChild(this);
-        this.x = window.innerWidth / 2 - this.clientWidth / 2;
-        this.y = window.innerHeight * 0.95;
-        window.addEventListener("keydown", (e) => this.onKeyDown(e));
-        window.addEventListener("keyup", (e) => this.onKeyUp(e));
-    }
-    onKeyDown(e) {
-        if (e.key == "ArrowLeft" || e.key == "a")
-            this.moveLeft = true;
-        else if (e.key == "ArrowRight" || e.key == "d")
-            this.moveRight = true;
-    }
-    onKeyUp(e) {
-        if (e.key == "ArrowLeft" || e.key == "a")
-            this.moveLeft = false;
-        else if (e.key == "ArrowRight" || e.key == "d")
-            this.moveRight = false;
-    }
-    update() {
-        let newX = 0;
-        if (this.moveLeft)
-            newX = this.x - this.speed;
-        if (this.moveRight)
-            newX = this.x + this.speed;
-        if (newX > 0 && newX + this.clientWidth < window.innerWidth)
-            this.x = newX;
-        this.draw();
-    }
-    draw() {
-        this.style.transform = `translate(${this.x}px, ${this.y}px)`;
-    }
-}
-window.customElements.define("paddle-component", Paddle);
-class Score {
-    constructor() {
-        this._bricksLeft = 0;
-        this._lives = 3;
+        this.innerHTML = "Lives: " + this._lives;
     }
     get bricksLeft() {
         return this._bricksLeft;
     }
     set bricksLeft(v) {
         this._bricksLeft = v;
+        this.update();
     }
     get lives() {
         return this._lives;
     }
     set lives(v) {
         this._lives = v;
+        this.update();
+    }
+    update() {
+        if (this._lives !== 0) {
+            this.innerHTML = 'Lives: ' + this._lives;
+        }
+        else {
+            this.innerHTML = 'Game over!';
+        }
+        if (this.bricksLeft == 0) {
+            this.innerHTML = 'You won!';
+        }
+        console.log(this.bricksLeft);
     }
 }
+window.customElements.define("score-component", Score);
 class Brick extends HTMLElement {
     constructor(x, y, width, height) {
         super();
@@ -269,6 +277,129 @@ class YellowBrick extends Brick {
     }
 }
 window.customElements.define("yellow-brick", YellowBrick);
+class Paddle extends HTMLElement {
+    constructor() {
+        super();
+        this._x = 0;
+        this._y = 0;
+        this._moveLeft = false;
+        this._moveRight = false;
+        this._speed = 7;
+        this._powerupActive = false;
+        console.log("Paddle created!");
+        let game = document.getElementsByTagName("game")[0];
+        game.appendChild(this);
+        this._behaviour = new Normal(this);
+        this._x = window.innerWidth / 2 - this.clientWidth / 2;
+        this._y = window.innerHeight * 0.95;
+        window.addEventListener("keydown", (e) => this.onKeyDown(e));
+        window.addEventListener("keyup", (e) => this.onKeyUp(e));
+    }
+    onKeyDown(e) {
+        if (e.key == "ArrowLeft" || e.key == "a")
+            this._moveLeft = true;
+        else if (e.key == "ArrowRight" || e.key == "d")
+            this._moveRight = true;
+    }
+    onKeyUp(e) {
+        if (e.key == "ArrowLeft" || e.key == "a")
+            this._moveLeft = false;
+        else if (e.key == "ArrowRight" || e.key == "d")
+            this._moveRight = false;
+    }
+    get speed() { return this._speed; }
+    get x() { return this._x; }
+    set x(value) { this._x = value; }
+    get y() { return this._y; }
+    get moveLeft() { return this._moveLeft; }
+    get moveRight() { return this._moveRight; }
+    set behaviour(behaviour) { this._behaviour = behaviour; }
+    set powerupActive(active) { this._powerupActive = active; }
+    update() {
+        this._behaviour.move();
+        this.draw();
+    }
+    draw() {
+        this.style.transform = `translate(${this._x}px, ${this._y}px)`;
+    }
+}
+window.customElements.define("paddle-component", Paddle);
+const POWERUP_DURATION = 2;
+class Double {
+    constructor(paddle) {
+        this.paddle = paddle;
+    }
+    move() {
+        let newX = 0;
+        this.paddle.powerupActive = true;
+        if (this.paddle.moveLeft)
+            newX = this.paddle.x - (this.paddle.speed * 2);
+        if (this.paddle.moveRight)
+            newX = this.paddle.x + (this.paddle.speed * 2);
+        if (newX > 0 && newX + this.paddle.clientWidth < window.innerWidth) {
+            this.paddle.x = newX;
+        }
+        setTimeout(() => {
+            this.paddle.behaviour = new Normal(this.paddle);
+            this.paddle.powerupActive = false;
+        }, POWERUP_DURATION * 1000);
+    }
+}
+class Normal {
+    constructor(paddle) {
+        this.paddle = paddle;
+    }
+    move() {
+        let newX = 0;
+        if (this.paddle.moveLeft)
+            newX = this.paddle.x - this.paddle.speed;
+        if (this.paddle.moveRight)
+            newX = this.paddle.x + this.paddle.speed;
+        if (newX > 0 && newX + this.paddle.clientWidth < window.innerWidth) {
+            this.paddle.x = newX;
+        }
+    }
+}
+class Reverse {
+    constructor(paddle) {
+        this.paddle = paddle;
+    }
+    move() {
+        let newX = 0;
+        this.paddle.powerupActive = true;
+        if (this.paddle.moveLeft)
+            newX = this.paddle.x + this.paddle.speed;
+        if (this.paddle.moveRight)
+            newX = this.paddle.x - this.paddle.speed;
+        if (newX > 0 && newX + this.paddle.clientWidth < window.innerWidth) {
+            this.paddle.x = newX;
+        }
+        setTimeout(() => {
+            this.paddle.behaviour = new Normal(this.paddle);
+            this.paddle.powerupActive = false;
+        }, POWERUP_DURATION * 1000);
+    }
+}
+class Slow {
+    constructor(paddle) {
+        this.paddle = paddle;
+    }
+    move() {
+        let newX = 0;
+        this.paddle.powerupActive = true;
+        if (this.paddle.moveLeft)
+            newX = this.paddle.x - (this.paddle.speed * 0);
+        if (this.paddle.moveRight)
+            newX = this.paddle.x + (this.paddle.speed * 0);
+        if (newX > 0 && newX + this.paddle.clientWidth < window.innerWidth) {
+            this.paddle.x = newX;
+        }
+        setTimeout(() => {
+            this.paddle.behaviour = new Normal(this.paddle);
+            this.paddle.powerupActive = false;
+        }, POWERUP_DURATION * 1000);
+    }
+}
 class Powerup extends HTMLElement {
     constructor(x, y) {
         super();
@@ -289,8 +420,23 @@ class Powerup extends HTMLElement {
         this._y -= this._speed;
         this.draw();
     }
-    hit() {
+}
+class BluePowerup extends Powerup {
+    constructor(x, y) {
+        super(x, y);
     }
 }
-window.customElements.define("hold-upgrade", Powerup);
+window.customElements.define("faster-upgrade", BluePowerup);
+class RedPowerup extends Powerup {
+    constructor(x, y) {
+        super(x, y);
+    }
+}
+window.customElements.define("hold-upgrade", RedPowerup);
+class YellowPowerup extends Powerup {
+    constructor(x, y) {
+        super(x, y);
+    }
+}
+window.customElements.define("reverse-upgrade", YellowPowerup);
 //# sourceMappingURL=main.js.map

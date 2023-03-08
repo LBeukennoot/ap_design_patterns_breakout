@@ -22,16 +22,6 @@ class Powerup extends HTMLElement {
 
     public update() : void {
         this._y -= this._speed
-        // if (this._y + this.clientHeight < window.innerHeight) {
-            
-        // } else {
-        //     //remove this powerup
-        // }
         this.draw()
     }
-
-    public hit() : void {
-        
-    }
 }
-window.customElements.define("hold-upgrade", Powerup as any)

@@ -1,17 +1,21 @@
 class Ball extends HTMLElement {
 
-    private x : number
-    private y: number
-    private startValueX : number = window.innerWidth / 2 - this.clientWidth / 2
-    private startValueY : number = window.innerHeight * 0.90
-    private speedX : number = SPEED_X
-    private speedY : number = SPEED_Y
+    private _x : number
+    private _y: number
+
+    private _startValueX : number = window.innerWidth / 2 - this.clientWidth / 2
+    private _startValueY : number = window.innerHeight * 0.90
+    
+    private _speedX : number = SPEED_X
+    private _speedY : number = SPEED_Y
+
+    private _outOfBounds: boolean = false
 
     constructor() {
         super()
 
-        this.x      = this.startValueX
-        this.y      = this.startValueY
+        this._x      = this._startValueX
+        this._y      = this._startValueY
 
         let game = document.getElementsByTagName("game")[0]
         game.appendChild(this)
@@ -20,51 +24,57 @@ class Ball extends HTMLElement {
     }
 
     public invertSpeedX() : void {
-        this.speedX *= -1
+        this._speedX *= -1
     }
 
     public invertSpeedY() : void {
-        this.speedY *= -1
+        this._speedY *= -1
     }
 
-    public getSpeedX() : number {
-        return this.speedX
+    public get speedX() : number {
+        return this._speedX
     }
 
-    public getSpeedY() : number {
-        return this.speedY
+    public get speedY() : number {
+        return this._speedY
     }
 
     public update() {
         //calculating x
-        let newX : number = this.x + this.speedX
+        let newX : number = this._x + this._speedX
         if(newX > 0 && newX + this.clientWidth < window.innerWidth) {
-            this.x = newX
+            this._x = newX
         } else {
-            this.speedX *= -1
+            this._speedX *= -1
         }
 
         //calculating y
-        let newY : number = this.y + this.speedY
+        let newY : number = this._y + this._speedY
         if(newY > 0 && newY + this.clientWidth < window.innerHeight) {
-            this.y = newY
+            this._y = newY
         } else {
-            this.speedY *= -1
+            this._speedY *= -1
         }
 
         if (newY + this.clientWidth > window.innerHeight) {
-            this.speedX = SPEED_X
-            this.speedY = SPEED_Y
-            this.x      = this.startValueX
-            this.y      = this.startValueY
-            console.log("live -1")
+            this._outOfBounds = true
         }
 
         this.draw()
     }
 
+    public get outOfBounds(): boolean { return this._outOfBounds }
+
+    public resetPosition() : void {
+        this._speedX = SPEED_X
+        this._speedY = SPEED_Y
+        this._x      = this._startValueX
+        this._y      = this._startValueY
+        this._outOfBounds = false
+    }
+
     private draw() : void {
-        this.style.transform = `translate(${this.x}px, ${this.y}px)`
+        this.style.transform = `translate(${this._x}px, ${this._y}px)`
     }
 }
 
