@@ -116,20 +116,7 @@ class Game {
                 if (this.getCollisionY(paddleBounds, this.powerups[i].getBoundingClientRect())) {
         
                     //activate powerup
-                    const powerupName = this.powerups[i].nodeName
-                    if(powerupName == "HOLD-UPGRADE") {
-
-                        this.paddle.behaviour = new Slow(this.paddle)
-
-                    } else if (powerupName == "FASTER-UPGRADE") {
-
-                        this.paddle.behaviour = new Double(this.paddle)
-
-                    } else if (powerupName == "REVERSE-UPGRADE") {
-
-                        this.paddle.behaviour = new Reverse(this.paddle)
-
-                    }
+                    this.powerups[i].setBehaviour(this.paddle)
 
                     //removing the powerup after 'collecting' it with paddle
                     this.powerups[i].remove()

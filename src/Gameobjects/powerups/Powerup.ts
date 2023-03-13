@@ -24,4 +24,6 @@ class Powerup extends HTMLElement {
         this._y -= this._speed
         this.draw()
     }
+
+    public setBehaviour(paddle: Paddle) :void {}
 }
